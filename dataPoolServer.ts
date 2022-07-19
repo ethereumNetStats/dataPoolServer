@@ -41,6 +41,13 @@ type ServerToClientEvents = {
     requestDailyBasicInitialData: () => void;
     requestWeeklyBasicInitialData: () => void;
 
+    minutelyBasicNewData: (minutelyBasicNewData: recordOfEthDB) => void;
+    hourlyBasicNewData: (hourlyBasicNewData: recordOfEthDB) => void;
+    dailyBasicNewData: (dailyBasicNewData: recordOfEthDB) => void;
+    weeklyBasicNewData: (weeklyBasicNewData: recordOfEthDB) => void;
+
+    resultOfCountingAddress: ({}) => void;
+
     whoAreYou: () => void;
 }
 
@@ -65,6 +72,8 @@ type ClientToServerEvents = {
     collectingWeeklyBasicData: () => void;
     weeklyBasicNewData: (minutelyBasicNewData: recordOfEthDB) => void;
     requestWeeklyBasicInitialData: () => void;
+
+    completeAddressCounting: ({}) => void;
 }
 
 //Launch dataPool socket server.
@@ -87,6 +96,7 @@ let weeklyBasicData: recordOfEthDBArray = [];
 let weeklyDataDuration: number = 7 * 24 * 60 * 60 * 1000;
 
 let ethChartSocketServerId: string = '';
+let newAddressSenderId: string = '';
 
 //Define client names.
 const minutelyBasicNetStatsMakerName: string = 'minutelyBasicNetStatsMaker';
@@ -94,6 +104,7 @@ const hourlyBasicNetStatsMakerName: string = 'hourlyBasicNetStatsMaker';
 const dailyBasicNetStatsMakerName: string = 'dailyBasicNetStatsMaker';
 const weeklyBasicNetStatsMakerName: string = "weeklyBasicNetStatsMaker"
 const ethChartSocketServerName: string = 'ethChartSocketServer';
+const newAddressSenderName: string = 'newAddressSender';
 
 //Registering socket server events.
 dataPoolServer.on('connect', async (client) => {
@@ -120,7 +131,11 @@ dataPoolServer.on('connect', async (client) => {
     } else if (client.handshake.query.name === ethChartSocketServerName) {
         ethChartSocketServerId = client.id;
         console.log(`${currentTimeReadable()} | The ethChartSocketServer is connected.`);
-    } else {
+    } else if (client.handshake.query.name === newAddressSenderName) {
+        newAddressSenderId = client.id;
+        console.log(`${currentTimeReadable()} | The newAddressSender is connected.`)
+    }
+    else {
         dataPoolServer.to(client.id).emit('whoAreYou');
     }
 
@@ -249,6 +264,13 @@ dataPoolServer.on('connect', async (client) => {
         }
     });
 
+    //Registering event listeners with newAddressSender
+    client.on('completeAddressCounting', (resultOfCountingAddress) => {
+        console.log(`${currentTimeReadable()} | Receive the completeAddressCounting event.`);
+        dataPoolServer.to(ethChartSocketServerId).emit('resultOfCountingAddress', resultOfCountingAddress);
+        console.log(`${currentTimeReadable()} | Emit the completeAddressCounting event.`);
+    });
+
     client.on("disconnect", (reason) => {
         if (client.id === minutelyNetStatsMakerId) {
             console.log(`${currentTimeReadable()} | Disconnect from minutelyBasicNetStatsMaker. Reason : ${reason}`);
@@ -260,6 +282,8 @@ dataPoolServer.on('connect', async (client) => {
             console.log(`${currentTimeReadable()} | Disconnect from weeklyBasicNetStatsMaker. Reason : ${reason}`);
         } else if (client.id === ethChartSocketServerId) {
             console.log(`${currentTimeReadable()} | Disconnect from ethChartSocketServer. Reason : ${reason}`);
+        } else if (client.id === newAddressSenderId) {
+            console.log(`${currentTimeReadable()} | Disconnect from newAddressSender. Reason : ${reason}`);
         } else {
             console.log(`${currentTimeReadable()} | Disconnect from an unknown client. Reason : ${reason}`);
         }

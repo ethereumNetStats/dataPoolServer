@@ -21,11 +21,13 @@ let weeklyBasicNetStatsMakerId = '';
 let weeklyBasicData = [];
 let weeklyDataDuration = 7 * 24 * 60 * 60 * 1000;
 let ethChartSocketServerId = '';
+let newAddressSenderId = '';
 const minutelyBasicNetStatsMakerName = 'minutelyBasicNetStatsMaker';
 const hourlyBasicNetStatsMakerName = 'hourlyBasicNetStatsMaker';
 const dailyBasicNetStatsMakerName = 'dailyBasicNetStatsMaker';
 const weeklyBasicNetStatsMakerName = "weeklyBasicNetStatsMaker";
 const ethChartSocketServerName = 'ethChartSocketServer';
+const newAddressSenderName = 'newAddressSender';
 dataPoolServer.on('connect', async (client) => {
     console.log(`${currentTimeReadable()} | Connect with a socket client. ID : ${client.id}`);
     if (client.handshake.query.name === minutelyBasicNetStatsMakerName) {
@@ -51,6 +53,10 @@ dataPoolServer.on('connect', async (client) => {
     else if (client.handshake.query.name === ethChartSocketServerName) {
         ethChartSocketServerId = client.id;
         console.log(`${currentTimeReadable()} | The ethChartSocketServer is connected.`);
+    }
+    else if (client.handshake.query.name === newAddressSenderName) {
+        newAddressSenderId = client.id;
+        console.log(`${currentTimeReadable()} | The newAddressSender is connected.`);
     }
     else {
         dataPoolServer.to(client.id).emit('whoAreYou');
@@ -175,6 +181,11 @@ dataPoolServer.on('connect', async (client) => {
             console.log(`${currentTimeReadable()} | The weeklyBasicInitialData is not stored yet. Emit the stillNoWeeklyBasicInitialData event.`);
         }
     });
+    client.on('completeAddressCounting', (resultOfCountingAddress) => {
+        console.log(`${currentTimeReadable()} | Receive the completeAddressCounting event.`);
+        dataPoolServer.to(ethChartSocketServerId).emit('resultOfCountingAddress', resultOfCountingAddress);
+        console.log(`${currentTimeReadable()} | Emit the completeAddressCounting event.`);
+    });
     client.on("disconnect", (reason) => {
         if (client.id === minutelyNetStatsMakerId) {
             console.log(`${currentTimeReadable()} | Disconnect from minutelyBasicNetStatsMaker. Reason : ${reason}`);
@@ -190,6 +201,9 @@ dataPoolServer.on('connect', async (client) => {
         }
         else if (client.id === ethChartSocketServerId) {
             console.log(`${currentTimeReadable()} | Disconnect from ethChartSocketServer. Reason : ${reason}`);
+        }
+        else if (client.id === newAddressSenderId) {
+            console.log(`${currentTimeReadable()} | Disconnect from newAddressSender. Reason : ${reason}`);
         }
         else {
             console.log(`${currentTimeReadable()} | Disconnect from an unknown client. Reason : ${reason}`);
