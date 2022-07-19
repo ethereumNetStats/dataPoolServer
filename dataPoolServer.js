@@ -20,6 +20,7 @@ let dailyDataDuration = 24 * 60 * 60 * 1000;
 let weeklyBasicNetStatsMakerId = '';
 let weeklyBasicData = [];
 let weeklyDataDuration = 7 * 24 * 60 * 60 * 1000;
+let poolArrayForCountingAddresses = [];
 let ethChartSocketServerId = '';
 let newAddressSenderId = '';
 const minutelyBasicNetStatsMakerName = 'minutelyBasicNetStatsMaker';
@@ -183,7 +184,8 @@ dataPoolServer.on('connect', async (client) => {
     });
     client.on('completeAddressCounting', (resultOfCountingAddress) => {
         console.log(`${currentTimeReadable()} | Receive the completeAddressCounting event.`);
-        dataPoolServer.to(ethChartSocketServerId).emit('resultOfCountingAddress', resultOfCountingAddress);
+        poolArrayForCountingAddresses = resultOfCountingAddress;
+        dataPoolServer.to(ethChartSocketServerId).emit('resultOfCountingAddress', poolArrayForCountingAddresses);
         console.log(`${currentTimeReadable()} | Emit the completeAddressCounting event.`);
     });
     client.on("disconnect", (reason) => {

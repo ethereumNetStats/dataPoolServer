@@ -95,6 +95,8 @@ let weeklyBasicNetStatsMakerId: string = '';
 let weeklyBasicData: recordOfEthDBArray = [];
 let weeklyDataDuration: number = 7 * 24 * 60 * 60 * 1000;
 
+let poolArrayForCountingAddresses: Array<{}> = [];
+
 let ethChartSocketServerId: string = '';
 let newAddressSenderId: string = '';
 
@@ -267,7 +269,8 @@ dataPoolServer.on('connect', async (client) => {
     //Registering event listeners with newAddressSender
     client.on('completeAddressCounting', (resultOfCountingAddress) => {
         console.log(`${currentTimeReadable()} | Receive the completeAddressCounting event.`);
-        dataPoolServer.to(ethChartSocketServerId).emit('resultOfCountingAddress', resultOfCountingAddress);
+        poolArrayForCountingAddresses = resultOfCountingAddress;
+        dataPoolServer.to(ethChartSocketServerId).emit('resultOfCountingAddress', poolArrayForCountingAddresses);
         console.log(`${currentTimeReadable()} | Emit the completeAddressCounting event.`);
     });
 
