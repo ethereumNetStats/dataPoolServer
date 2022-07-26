@@ -1,5 +1,15 @@
 import {Server} from "socket.io";
 
+const currentTimeReadable = (): string => {
+    let date_obj = new Date();
+    return `${date_obj.getUTCFullYear()}-${('0' + (date_obj.getUTCMonth() + 1)).slice(-2)}-${('0' + date_obj.getUTCDate()).slice(-2)} ${('0' + date_obj.getUTCHours()).slice(-2)}:${('0' + date_obj.getUTCMinutes()).slice(-2)}:${('0' + date_obj.getUTCSeconds()).slice(-2)}`;
+};
+
+const unixTimeReadable = (unix_sec: number): string => {
+    let date_obj = new Date(unix_sec);
+    return `${date_obj.getUTCFullYear()}-${('0' + (date_obj.getUTCMonth() + 1)).slice(-2)}-${('0' + date_obj.getUTCDate()).slice(-2)} ${('0' + date_obj.getUTCHours()).slice(-2)}:${('0' + date_obj.getUTCMinutes()).slice(-2)}:${('0' + date_obj.getUTCSeconds()).slice(-2)}`;
+};
+
 type recordOfEthDB = {
     'id'?: number,
     'startTimeReadable'?: string,
@@ -24,15 +34,20 @@ type recordOfEthDB = {
 
 type recordOfEthDBArray = Array<recordOfEthDB>;
 
-const currentTimeReadable = (): string => {
-    let date_obj = new Date();
-    return `${date_obj.getUTCFullYear()}-${('0' + (date_obj.getUTCMonth() + 1)).slice(-2)}-${('0' + date_obj.getUTCDate()).slice(-2)} ${('0' + date_obj.getUTCHours()).slice(-2)}:${('0' + date_obj.getUTCMinutes()).slice(-2)}:${('0' + date_obj.getUTCSeconds()).slice(-2)}`;
-};
+type addresses = {
+    startTime: number,
+    endTime: number,
+    value: number,
+}
 
-const unixTimeReadable = (unix_sec: number): string => {
-    let date_obj = new Date(unix_sec);
-    return `${date_obj.getUTCFullYear()}-${('0' + (date_obj.getUTCMonth() + 1)).slice(-2)}-${('0' + date_obj.getUTCDate()).slice(-2)} ${('0' + date_obj.getUTCHours()).slice(-2)}:${('0' + date_obj.getUTCMinutes()).slice(-2)}:${('0' + date_obj.getUTCSeconds()).slice(-2)}`;
-};
+type arrayOfAddresses = Array<addresses>
+
+type addressesInTimeRange = {
+    minutely: arrayOfAddresses,
+    hourly: arrayOfAddresses,
+    daily: arrayOfAddresses,
+    weekly: arrayOfAddresses
+}
 
 //Define the type of the server => client events.
 type ServerToClientEvents = {
@@ -46,7 +61,7 @@ type ServerToClientEvents = {
     dailyBasicNewData: (dailyBasicNewData: recordOfEthDB) => void;
     weeklyBasicNewData: (weeklyBasicNewData: recordOfEthDB) => void;
 
-    resultOfCountingAddress: ({}) => void;
+    resultOfCountingAddress: (resultOfCountAddress: arrayOfAddresses) => void;
 
     whoAreYou: () => void;
 }
@@ -95,7 +110,7 @@ let weeklyBasicNetStatsMakerId: string = '';
 let weeklyBasicData: recordOfEthDBArray = [];
 let weeklyDataDuration: number = 7 * 24 * 60 * 60 * 1000;
 
-let poolArrayForCountingAddresses: Array<{}> = [];
+let poolArrayForCountingAddresses: addressesInTimeRange = {minutely: [],hourly: [], daily: [], weekly: []};
 
 let ethChartSocketServerId: string = '';
 let newAddressSenderId: string = '';
@@ -108,7 +123,7 @@ const weeklyBasicNetStatsMakerName: string = "weeklyBasicNetStatsMaker"
 const ethChartSocketServerName: string = 'ethChartSocketServer';
 const newAddressSenderName: string = 'newAddressSender';
 
-//Registering socket server events.
+//Registering socket server event listeners.
 dataPoolServer.on('connect', async (client) => {
 
     console.log(`${currentTimeReadable()} | Connect with a socket client. ID : ${client.id}`);
@@ -267,7 +282,7 @@ dataPoolServer.on('connect', async (client) => {
     });
 
     //Registering event listeners with newAddressSender
-    client.on('completeAddressCounting', (resultOfCountingAddress) => {
+    client.on('completeAddressCounting', (resultOfCountingAddress: addressesInTimeRange) => {
         console.log(`${currentTimeReadable()} | Receive the completeAddressCounting event.`);
         poolArrayForCountingAddresses = resultOfCountingAddress;
         dataPoolServer.to(ethChartSocketServerId).emit('resultOfCountingAddress', poolArrayForCountingAddresses);
