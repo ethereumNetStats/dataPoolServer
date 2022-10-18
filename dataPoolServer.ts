@@ -1,53 +1,23 @@
+//Import environment variables.
+import "dotenv/config";
+
+//Import packages.
 import {Server} from "socket.io";
+import {io} from "socket.io-client";
 
-const currentTimeReadable = (): string => {
-    let date_obj = new Date();
-    return `${date_obj.getUTCFullYear()}-${('0' + (date_obj.getUTCMonth() + 1)).slice(-2)}-${('0' + date_obj.getUTCDate()).slice(-2)} ${('0' + date_obj.getUTCHours()).slice(-2)}:${('0' + date_obj.getUTCMinutes()).slice(-2)}:${('0' + date_obj.getUTCSeconds()).slice(-2)}`;
-};
+//Import self-made packages.
+import {currentTimeReadable, unixTimeReadable} from "@pierogi.dev/readable_time";
 
-const unixTimeReadable = (unix_sec: number): string => {
-    let date_obj = new Date(unix_sec);
-    return `${date_obj.getUTCFullYear()}-${('0' + (date_obj.getUTCMonth() + 1)).slice(-2)}-${('0' + date_obj.getUTCDate()).slice(-2)} ${('0' + date_obj.getUTCHours()).slice(-2)}:${('0' + date_obj.getUTCMinutes()).slice(-2)}:${('0' + date_obj.getUTCSeconds()).slice(-2)}`;
-};
-
-type recordOfEthDB = {
-    'id'?: number,
-    'startTimeReadable'?: string,
-    'endTimeReadable'?: string,
-    'startTimeUnix': number,
-    'endTimeUnix': number,
-    'actualStartTimeUnix': number,
-    'actualEndTimeUnix': number,
-    'startBlockNumber': number,
-    'endBlockNumber': number,
-    'blocks': number,
-    'totalBlockSize': number,
-    'averageBlockSize': number,
-    'totalDifficulty': number,
-    'averageDifficulty': number,
-    'totalUncleDifficulty': number,
-    'hashRate': number,
-    'transactions': number,
-    'transactionsPerBlock': number,
-    'noRecordFlag'?: boolean,
-};
-
-type recordOfEthDBArray = Array<recordOfEthDB>;
-
-type addresses = {
-    startTime: number,
-    endTime: number,
-    value: number,
-}
-
-type arrayOfAddresses = Array<addresses>
-
-type addressesInTimeRange = {
-    minutely: arrayOfAddresses,
-    hourly: arrayOfAddresses,
-    daily: arrayOfAddresses,
-    weekly: arrayOfAddresses
-}
+//Import types.
+import type {Socket} from "socket.io-client";
+import type {
+    addressesInTimeRange,
+    arrayOfAddresses,
+    recordOfEthDB,
+    recordOfEthDBArray,
+    minutelyNetStatsArray,
+    minutelyNetStats,
+} from "./types";
 
 //Define the type of the server => client events.
 type ServerToClientEvents = {
@@ -73,6 +43,8 @@ type ClientToServerEvents = {
     minutelyBasicNewData: (minutelyBasicNewData: recordOfEthDB) => void;
     requestMinutelyBasicInitialData: () => void;
 
+    minutelyInitialNetStats: (minytelyNetStatsArray: minutelyNetStatsArray) => void;
+
     sendHourlyBasicInitialData: (minutelyBasicInitialData: recordOfEthDBArray) => void;
     collectingHourlyBasicData: () => void;
     hourlyBasicNewData: (minutelyBasicNewData: recordOfEthDB) => void;
@@ -95,7 +67,8 @@ type ClientToServerEvents = {
 const dataPoolServer: Server = new Server<ClientToServerEvents, ServerToClientEvents>(2226);
 
 let minutelyNetStatsMakerId: string = '';
-let minutelyBasicData: recordOfEthDBArray = [];
+// let minutelyNetStats: recordOfEthDBArray = [];
+let minutelyNetStats: minutelyNetStatsArray = [];
 const minutelyDataDuration = 60 * 1000;
 
 let hourlyBasicNetStatsMakerId: string = '';
@@ -110,7 +83,7 @@ let weeklyBasicNetStatsMakerId: string = '';
 let weeklyBasicData: recordOfEthDBArray = [];
 let weeklyDataDuration: number = 7 * 24 * 60 * 60 * 1000;
 
-let poolArrayForCountingAddresses: addressesInTimeRange = {minutely: [],hourly: [], daily: [], weekly: []};
+let poolArrayForCountingAddresses: addressesInTimeRange = {minutely: [], hourly: [], daily: [], weekly: []};
 
 let ethChartSocketServerId: string = '';
 let newAddressSenderId: string = '';
@@ -151,47 +124,50 @@ dataPoolServer.on('connect', async (client) => {
     } else if (client.handshake.query.name === newAddressSenderName) {
         newAddressSenderId = client.id;
         console.log(`${currentTimeReadable()} | The newAddressSender is connected.`)
-    }
-    else {
+    } else {
         dataPoolServer.to(client.id).emit('whoAreYou');
     }
 
     //Registering event listeners with minutelyBasicDataMaker
-    client.on('sendMinutelyBasicInitialData', (minutelyBasicInitialData: recordOfEthDBArray) => {
-        minutelyBasicData = minutelyBasicInitialData;
-        console.log(`${currentTimeReadable()} | Receive the minutely basic initial data. ${unixTimeReadable(minutelyBasicInitialData[0].startTimeUnix * 1000)} ${unixTimeReadable(minutelyBasicInitialData[ minutelyBasicInitialData.length - 1].startTimeUnix * 1000)}`);
-    });
-    client.on('collectingMinutelyBasicData', () => {
-        console.log(`${currentTimeReadable()} | The minutely data maker is collecting data until current time.`);
-        setTimeout(() => {
-            dataPoolServer.to(minutelyNetStatsMakerId).emit('requestMinutelyBasicInitialData');
-        }, minutelyDataDuration);
-    });
+    // client.on('sendMinutelyBasicInitialData', (minutelyBasicInitialData: recordOfEthDBArray) => {
+    //     minutelyNetStats = minutelyBasicInitialData;
+    //     console.log(`${currentTimeReadable()} | Receive the minutely basic initial data. ${unixTimeReadable(minutelyBasicInitialData[0].startTimeUnix * 1000)} ${unixTimeReadable(minutelyBasicInitialData[minutelyBasicInitialData.length - 1].startTimeUnix * 1000)}`);
+    // });
+    // client.on('collectingMinutelyNetStats', () => {
+    //     console.log(`${currentTimeReadable()} | Collecting : The minutely data maker is collecting data until current time.`);
+    //     setTimeout(() => {
+    //         dataPoolServer.to(minutelyNetStatsMakerId).emit('requestMinutelyBasicInitialData');
+    //     }, minutelyDataDuration);
+    // });
+
     //Update minutely basic data and emit the minutelyBasicNewData event to the ethChartSocketServer.
-    client.on(`minutelyBasicNewData`, (minutelyBasicNewData: recordOfEthDB) => {
-        console.log(`${currentTimeReadable()} | Receive the minutelyBasicNewData event.`);
-        if (minutelyBasicData.length !== 0) {
-            minutelyBasicData = [...minutelyBasicData.slice(1), minutelyBasicNewData];
-            console.log(`${currentTimeReadable()} | Update the minutely basic data. ${unixTimeReadable(minutelyBasicData[0].startTimeUnix * 1000)} ${unixTimeReadable(minutelyBasicData[ minutelyBasicData.length - 1].startTimeUnix * 1000)}`);
-            dataPoolServer.to(ethChartSocketServerId).emit('minutelyBasicNewData', minutelyBasicNewData);
-            console.log(`${currentTimeReadable()} | Emit the minutelyBasicNewData event.`);
+    client.on(`newMinutelyNetStats`, (newMinutelyNetStats: minutelyNetStats) => {
+        console.log(`${currentTimeReadable()} | Receive : newMinutelyNetStats.`);
+        if (minutelyNetStats.length !== 0) {
+            minutelyNetStats = [...minutelyNetStats.slice(1), newMinutelyNetStats];
+            console.log(`${currentTimeReadable()} | Update : minutelyNetStats. | ${unixTimeReadable(minutelyNetStats[0].startTimeUnix)} ${unixTimeReadable(minutelyNetStats[minutelyNetStats.length - 1].startTimeUnix)}`);
+            dataPoolServer.to(ethChartSocketServerId).emit('newMinutelyNetStats', newMinutelyNetStats);
+            console.log(`${currentTimeReadable()} | Emit : newMinutelyNetStats.`);
         }
     });
-    client.on('requestMinutelyBasicInitialData', () => {
-        console.log(`${currentTimeReadable()} | Receive the requestMinutelyBasicInitialData event.`);
-        if (minutelyBasicData.length !== 0) {
-            dataPoolServer.to(ethChartSocketServerId).emit('minutelyBasicInitialData', (minutelyBasicData));
-            console.log(`${currentTimeReadable()} | Emit the minutelyBasicInitialData event.`);
+    client.on('requestInitialMinutelyNetStats', () => {
+        console.log(`${currentTimeReadable()} | Receive | Event : requestInitialMinutelyNetStats.`);
+        if (minutelyNetStats.length !== 0) {
+            dataPoolServer.to(ethChartSocketServerId).emit('initialMinutelyNetStats', minutelyNetStats, () => {
+                console.log(`${currentTimeReadable()} | Emit : initialMinutelyNetStats.`);
+            });
         } else {
-            dataPoolServer.to(ethChartSocketServerId).emit('stillNoMinutelyBasicInitialData');
-            console.log(`${currentTimeReadable()} | The basicInitialChartData is not stored yet. Emit the stillNoMinutelyBasicInitialData event.`);
+            dataPoolServer.to(ethChartSocketServerId).emit('stillNoMinutelyNetStats', () => {
+                console.log(`${currentTimeReadable()} | No data | The minutelyNetStats is not stored yet.`);
+                console.log(`${currentTimeReadable()} | Emit : stillNoMinutelyNetStats.`);
+            });
         }
     });
 
     //Registering event listeners with hourlyBasicDataMaker
     client.on('sendHourlyBasicInitialData', (hourlyBasicInitialData: recordOfEthDBArray) => {
         hourlyBasicData = hourlyBasicInitialData;
-        console.log(`${currentTimeReadable()} | Receive the hourly basic initial data. ${unixTimeReadable(hourlyBasicInitialData[0].startTimeUnix * 1000)} ${unixTimeReadable(hourlyBasicInitialData[ hourlyBasicInitialData.length - 1].startTimeUnix * 1000)}`);
+        console.log(`${currentTimeReadable()} | Receive the hourly basic initial data. ${unixTimeReadable(hourlyBasicInitialData[0].startTimeUnix * 1000)} ${unixTimeReadable(hourlyBasicInitialData[hourlyBasicInitialData.length - 1].startTimeUnix * 1000)}`);
     });
     client.on('collectingHourlyBasicData', () => {
         console.log(`${currentTimeReadable()} | The hourly data maker is collecting data until current time.`);
@@ -203,7 +179,7 @@ dataPoolServer.on('connect', async (client) => {
         console.log(`${currentTimeReadable()} | Receive the hourlyBasicNewData event.`);
         if (hourlyBasicData.length !== 0) {
             hourlyBasicData = [...hourlyBasicData.slice(1), hourlyBasicNewData];
-            console.log(`${currentTimeReadable()} | Update the hourly basic data. ${unixTimeReadable(hourlyBasicData[0].startTimeUnix * 1000)} ${unixTimeReadable(hourlyBasicData[ hourlyBasicData.length - 1].startTimeUnix * 1000)}`);
+            console.log(`${currentTimeReadable()} | Update the hourly basic data. ${unixTimeReadable(hourlyBasicData[0].startTimeUnix * 1000)} ${unixTimeReadable(hourlyBasicData[hourlyBasicData.length - 1].startTimeUnix * 1000)}`);
             dataPoolServer.to(ethChartSocketServerId).emit('hourlyBasicNewData', hourlyBasicNewData);
             console.log(`${currentTimeReadable()} | Emit the hourlyBasicNewData event.`);
         }
@@ -222,7 +198,7 @@ dataPoolServer.on('connect', async (client) => {
     //Registering event listeners with dailyBasicDataMaker
     client.on('sendDailyBasicInitialData', (dailyBasicInitialData: recordOfEthDBArray) => {
         dailyBasicData = dailyBasicInitialData;
-        console.log(`${currentTimeReadable()} | Receive the daily basic initial data. ${unixTimeReadable(dailyBasicInitialData[0].startTimeUnix * 1000)} ${unixTimeReadable(dailyBasicInitialData[ dailyBasicInitialData.length - 1].startTimeUnix * 1000)}`);
+        console.log(`${currentTimeReadable()} | Receive the daily basic initial data. ${unixTimeReadable(dailyBasicInitialData[0].startTimeUnix * 1000)} ${unixTimeReadable(dailyBasicInitialData[dailyBasicInitialData.length - 1].startTimeUnix * 1000)}`);
     });
     client.on('collectingDailyBasicData', () => {
         console.log(`${currentTimeReadable()} | The daily data maker is collecting data until current time.`);
@@ -234,7 +210,7 @@ dataPoolServer.on('connect', async (client) => {
         console.log(`${currentTimeReadable()} | Receive the dailyBasicNewData event.`);
         if (dailyBasicData.length !== 0) {
             dailyBasicData = [...dailyBasicData.slice(1), dailyBasicNewData];
-            console.log(`${currentTimeReadable()} | Update the daily basic data. ${unixTimeReadable(dailyBasicData[0].startTimeUnix * 1000)} ${unixTimeReadable(dailyBasicData[ dailyBasicData.length - 1].startTimeUnix * 1000)}`);
+            console.log(`${currentTimeReadable()} | Update the daily basic data. ${unixTimeReadable(dailyBasicData[0].startTimeUnix * 1000)} ${unixTimeReadable(dailyBasicData[dailyBasicData.length - 1].startTimeUnix * 1000)}`);
             dataPoolServer.to(ethChartSocketServerId).emit('dailyBasicNewData', dailyBasicNewData);
             console.log(`${currentTimeReadable()} | Emit the dailyBasicNewData event.`);
         }
@@ -253,7 +229,7 @@ dataPoolServer.on('connect', async (client) => {
     //Registering event listeners with weeklyBasicDataMaker
     client.on('sendWeeklyBasicInitialData', (weeklyBasicInitialData: recordOfEthDBArray) => {
         weeklyBasicData = weeklyBasicInitialData;
-        console.log(`${currentTimeReadable()} | Receive the weekly basic initial data. ${unixTimeReadable(weeklyBasicInitialData[0].startTimeUnix * 1000)} ${unixTimeReadable(weeklyBasicInitialData[ weeklyBasicInitialData.length - 1].startTimeUnix * 1000)}`);
+        console.log(`${currentTimeReadable()} | Receive the weekly basic initial data. ${unixTimeReadable(weeklyBasicInitialData[0].startTimeUnix * 1000)} ${unixTimeReadable(weeklyBasicInitialData[weeklyBasicInitialData.length - 1].startTimeUnix * 1000)}`);
     });
     client.on('collectingWeeklyBasicData', () => {
         console.log(`${currentTimeReadable()} | The weekly data maker is collecting data until current time.`);
@@ -265,7 +241,7 @@ dataPoolServer.on('connect', async (client) => {
         console.log(`${currentTimeReadable()} | Receive the dailyBasicNewData event.`);
         if (weeklyBasicData.length !== 0) {
             weeklyBasicData = [...weeklyBasicData.slice(1), weeklyBasicNewData];
-            console.log(`${currentTimeReadable()} | Update the weekly basic data. ${unixTimeReadable(weeklyBasicData[0].startTimeUnix * 1000)} ${unixTimeReadable(weeklyBasicData[ weeklyBasicData.length - 1].startTimeUnix * 1000)}`);
+            console.log(`${currentTimeReadable()} | Update the weekly basic data. ${unixTimeReadable(weeklyBasicData[0].startTimeUnix * 1000)} ${unixTimeReadable(weeklyBasicData[weeklyBasicData.length - 1].startTimeUnix * 1000)}`);
             dataPoolServer.to(ethChartSocketServerId).emit('weeklyBasicNewData', weeklyBasicNewData);
             console.log(`${currentTimeReadable()} | Emit the weeklyBasicNewData event.`);
         }
@@ -321,4 +297,46 @@ dataPoolServer.on("reconnect_error", (error) => {
 
 dataPoolServer.on("reconnect_failed", () => {
     console.log(`${currentTimeReadable()} | Reconnection failed.`);
+});
+
+
+
+type SocketServerToClientEvents = {
+    initialMinutelyNetStats: (minutelyNetStatsArray: minutelyNetStatsArray) => void;
+    newMinutelyNetStats: (newMinutelyNetStats: minutelyNetStats) => void,
+}
+
+type ClientToSocketServerEvents = {
+    requestInitialMinutelyNetStats: (ack: Function) => void;
+}
+
+const socketClientName: string = "socketClient";
+
+const socketClient: Socket<SocketServerToClientEvents, ClientToSocketServerEvents> = io(`${process.env.SOCKET_SERVER_ADDRESS}`, {
+    forceNew: true,
+    query: {name: socketClientName}
+});
+
+socketClient.on("connect", () => {
+    console.log(`${currentTimeReadable()} | Connect : socketServer.`);
+    let emitTime: number = performance.now();
+    socketClient.emit("requestInitialMinutelyNetStats", (response: any) => {
+        console.log(`${currentTimeReadable()} | Ack | Event : requestMinutelyInitialStats | Ack time : ${((performance.now() - emitTime) / 1000).toString().slice(0, -12)} sec | Message : ${response}`);
+    });
+});
+
+socketClient.on("initialMinutelyNetStats", (minutelyInitialNetStats: minutelyNetStatsArray) => {
+    console.log(`${currentTimeReadable()} | Received | Event : minutelyInitialNetStats`);
+    console.log(minutelyInitialNetStats);
+    minutelyNetStats = minutelyInitialNetStats;
+});
+
+socketClient.on("newMinutelyNetStats", (newMinutelyNetStats) => {
+    console.log(`${currentTimeReadable()} | Receive : newMinutelyNetStats.`);
+    if (minutelyNetStats.length !== 0) {
+        minutelyNetStats = [...minutelyNetStats.slice(1), newMinutelyNetStats];
+        console.log(`${currentTimeReadable()} | Update : minutelyNetStats. | ${unixTimeReadable(minutelyNetStats[0].startTimeUnix)} ${unixTimeReadable(minutelyNetStats[minutelyNetStats.length - 1].startTimeUnix)}`);
+        dataPoolServer.to(ethChartSocketServerId).emit('newMinutelyNetStats', newMinutelyNetStats);
+        console.log(`${currentTimeReadable()} | Emit : newMinutelyNetStats.`);
+    }
 });
