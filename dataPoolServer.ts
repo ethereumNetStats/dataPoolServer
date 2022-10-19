@@ -4,6 +4,7 @@ import "dotenv/config";
 //Import packages.
 import {Server} from "socket.io";
 import {io} from "socket.io-client";
+import {performance} from "perf_hooks";
 
 //Import self-made packages.
 import {currentTimeReadable, unixTimeReadable} from "@pierogi.dev/readable_time";
@@ -300,10 +301,9 @@ dataPoolServer.on("reconnect_failed", () => {
 });
 
 
-
 type SocketServerToClientEvents = {
     initialMinutelyNetStats: (minutelyNetStatsArray: minutelyNetStatsArray) => void;
-    newMinutelyNetStats: (newMinutelyNetStats: minutelyNetStats) => void,
+    newMinutelyNetStats: (newMinutelyNetStats: minutelyNetStats, ack: Function) => void,
 }
 
 type ClientToSocketServerEvents = {
@@ -321,20 +321,22 @@ socketClient.on("connect", () => {
     console.log(`${currentTimeReadable()} | Connect : socketServer.`);
     let emitTime: number = performance.now();
     socketClient.emit("requestInitialMinutelyNetStats", (response: any) => {
-        console.log(`${currentTimeReadable()} | Ack | Event : requestMinutelyInitialStats | Ack time : ${((performance.now() - emitTime) / 1000).toString().slice(0, -12)} sec | Message : ${response}`);
+        console.log(`${currentTimeReadable()} | Receive : Ack | Event : 'requestMinutelyInitialStats' | Ack time : ${((performance.now() - emitTime) / 1000).toString().slice(0, -12)} sec | Message : ${response}`);
     });
 });
 
 socketClient.on("initialMinutelyNetStats", (minutelyInitialNetStats: minutelyNetStatsArray) => {
-    console.log(`${currentTimeReadable()} | Received | Event : minutelyInitialNetStats`);
-    console.log(minutelyInitialNetStats);
+    console.log(`${currentTimeReadable()} | Receive : 'minutelyInitialNetStats'`);
     minutelyNetStats = minutelyInitialNetStats;
 });
 
-socketClient.on("newMinutelyNetStats", (newMinutelyNetStats) => {
+socketClient.on("newMinutelyNetStats", (newMinutelyNetStats: minutelyNetStats, ack: Function) => {
+    ack(`Received : 'newMinutelyNetStats' | Datetime : ${unixTimeReadable(newMinutelyNetStats.endTimeUnix)}`);
     console.log(`${currentTimeReadable()} | Receive : newMinutelyNetStats.`);
     if (minutelyNetStats.length !== 0) {
-        minutelyNetStats = [...minutelyNetStats.slice(1), newMinutelyNetStats];
+        minutelyNetStats.splice(-1);
+        minutelyNetStats = [newMinutelyNetStats, ...minutelyNetStats];
+        console.log(minutelyNetStats);
         console.log(`${currentTimeReadable()} | Update : minutelyNetStats. | ${unixTimeReadable(minutelyNetStats[0].startTimeUnix)} ${unixTimeReadable(minutelyNetStats[minutelyNetStats.length - 1].startTimeUnix)}`);
         dataPoolServer.to(ethChartSocketServerId).emit('newMinutelyNetStats', newMinutelyNetStats);
         console.log(`${currentTimeReadable()} | Emit : newMinutelyNetStats.`);

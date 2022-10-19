@@ -1,15 +1,11 @@
+import "dotenv/config";
 import { Server } from "socket.io";
-const currentTimeReadable = () => {
-    let date_obj = new Date();
-    return `${date_obj.getUTCFullYear()}-${('0' + (date_obj.getUTCMonth() + 1)).slice(-2)}-${('0' + date_obj.getUTCDate()).slice(-2)} ${('0' + date_obj.getUTCHours()).slice(-2)}:${('0' + date_obj.getUTCMinutes()).slice(-2)}:${('0' + date_obj.getUTCSeconds()).slice(-2)}`;
-};
-const unixTimeReadable = (unix_sec) => {
-    let date_obj = new Date(unix_sec);
-    return `${date_obj.getUTCFullYear()}-${('0' + (date_obj.getUTCMonth() + 1)).slice(-2)}-${('0' + date_obj.getUTCDate()).slice(-2)} ${('0' + date_obj.getUTCHours()).slice(-2)}:${('0' + date_obj.getUTCMinutes()).slice(-2)}:${('0' + date_obj.getUTCSeconds()).slice(-2)}`;
-};
+import { io } from "socket.io-client";
+import { performance } from "perf_hooks";
+import { currentTimeReadable, unixTimeReadable } from "@pierogi.dev/readable_time";
 const dataPoolServer = new Server(2226);
 let minutelyNetStatsMakerId = '';
-let minutelyBasicData = [];
+let minutelyNetStats = [];
 const minutelyDataDuration = 60 * 1000;
 let hourlyBasicNetStatsMakerId = '';
 let hourlyBasicData = [];
@@ -62,34 +58,27 @@ dataPoolServer.on('connect', async (client) => {
     else {
         dataPoolServer.to(client.id).emit('whoAreYou');
     }
-    client.on('sendMinutelyBasicInitialData', (minutelyBasicInitialData) => {
-        minutelyBasicData = minutelyBasicInitialData;
-        console.log(`${currentTimeReadable()} | Receive the minutely basic initial data. ${unixTimeReadable(minutelyBasicInitialData[0].startTimeUnix * 1000)} ${unixTimeReadable(minutelyBasicInitialData[minutelyBasicInitialData.length - 1].startTimeUnix * 1000)}`);
-    });
-    client.on('collectingMinutelyBasicData', () => {
-        console.log(`${currentTimeReadable()} | The minutely data maker is collecting data until current time.`);
-        setTimeout(() => {
-            dataPoolServer.to(minutelyNetStatsMakerId).emit('requestMinutelyBasicInitialData');
-        }, minutelyDataDuration);
-    });
-    client.on(`minutelyBasicNewData`, (minutelyBasicNewData) => {
-        console.log(`${currentTimeReadable()} | Receive the minutelyBasicNewData event.`);
-        if (minutelyBasicData.length !== 0) {
-            minutelyBasicData = [...minutelyBasicData.slice(1), minutelyBasicNewData];
-            console.log(`${currentTimeReadable()} | Update the minutely basic data. ${unixTimeReadable(minutelyBasicData[0].startTimeUnix * 1000)} ${unixTimeReadable(minutelyBasicData[minutelyBasicData.length - 1].startTimeUnix * 1000)}`);
-            dataPoolServer.to(ethChartSocketServerId).emit('minutelyBasicNewData', minutelyBasicNewData);
-            console.log(`${currentTimeReadable()} | Emit the minutelyBasicNewData event.`);
+    client.on(`newMinutelyNetStats`, (newMinutelyNetStats) => {
+        console.log(`${currentTimeReadable()} | Receive : newMinutelyNetStats.`);
+        if (minutelyNetStats.length !== 0) {
+            minutelyNetStats = [...minutelyNetStats.slice(1), newMinutelyNetStats];
+            console.log(`${currentTimeReadable()} | Update : minutelyNetStats. | ${unixTimeReadable(minutelyNetStats[0].startTimeUnix)} ${unixTimeReadable(minutelyNetStats[minutelyNetStats.length - 1].startTimeUnix)}`);
+            dataPoolServer.to(ethChartSocketServerId).emit('newMinutelyNetStats', newMinutelyNetStats);
+            console.log(`${currentTimeReadable()} | Emit : newMinutelyNetStats.`);
         }
     });
-    client.on('requestMinutelyBasicInitialData', () => {
-        console.log(`${currentTimeReadable()} | Receive the requestMinutelyBasicInitialData event.`);
-        if (minutelyBasicData.length !== 0) {
-            dataPoolServer.to(ethChartSocketServerId).emit('minutelyBasicInitialData', (minutelyBasicData));
-            console.log(`${currentTimeReadable()} | Emit the minutelyBasicInitialData event.`);
+    client.on('requestInitialMinutelyNetStats', () => {
+        console.log(`${currentTimeReadable()} | Receive | Event : requestInitialMinutelyNetStats.`);
+        if (minutelyNetStats.length !== 0) {
+            dataPoolServer.to(ethChartSocketServerId).emit('initialMinutelyNetStats', minutelyNetStats, () => {
+                console.log(`${currentTimeReadable()} | Emit : initialMinutelyNetStats.`);
+            });
         }
         else {
-            dataPoolServer.to(ethChartSocketServerId).emit('stillNoMinutelyBasicInitialData');
-            console.log(`${currentTimeReadable()} | The basicInitialChartData is not stored yet. Emit the stillNoMinutelyBasicInitialData event.`);
+            dataPoolServer.to(ethChartSocketServerId).emit('stillNoMinutelyNetStats', () => {
+                console.log(`${currentTimeReadable()} | No data | The minutelyNetStats is not stored yet.`);
+                console.log(`${currentTimeReadable()} | Emit : stillNoMinutelyNetStats.`);
+            });
         }
     });
     client.on('sendHourlyBasicInitialData', (hourlyBasicInitialData) => {
@@ -223,4 +212,32 @@ dataPoolServer.on("reconnect_error", (error) => {
 });
 dataPoolServer.on("reconnect_failed", () => {
     console.log(`${currentTimeReadable()} | Reconnection failed.`);
+});
+const socketClientName = "socketClient";
+const socketClient = io(`${process.env.SOCKET_SERVER_ADDRESS}`, {
+    forceNew: true,
+    query: { name: socketClientName }
+});
+socketClient.on("connect", () => {
+    console.log(`${currentTimeReadable()} | Connect : socketServer.`);
+    let emitTime = performance.now();
+    socketClient.emit("requestInitialMinutelyNetStats", (response) => {
+        console.log(`${currentTimeReadable()} | Receive : Ack | Event : 'requestMinutelyInitialStats' | Ack time : ${((performance.now() - emitTime) / 1000).toString().slice(0, -12)} sec | Message : ${response}`);
+    });
+});
+socketClient.on("initialMinutelyNetStats", (minutelyInitialNetStats) => {
+    console.log(`${currentTimeReadable()} | Receive : 'minutelyInitialNetStats'`);
+    minutelyNetStats = minutelyInitialNetStats;
+});
+socketClient.on("newMinutelyNetStats", (newMinutelyNetStats, ack) => {
+    ack(`Received : 'newMinutelyNetStats' | Datetime : ${unixTimeReadable(newMinutelyNetStats.endTimeUnix)}`);
+    console.log(`${currentTimeReadable()} | Receive : newMinutelyNetStats.`);
+    if (minutelyNetStats.length !== 0) {
+        minutelyNetStats.splice(-1);
+        minutelyNetStats = [newMinutelyNetStats, ...minutelyNetStats];
+        console.log(minutelyNetStats);
+        console.log(`${currentTimeReadable()} | Update : minutelyNetStats. | ${unixTimeReadable(minutelyNetStats[0].startTimeUnix)} ${unixTimeReadable(minutelyNetStats[minutelyNetStats.length - 1].startTimeUnix)}`);
+        dataPoolServer.to(ethChartSocketServerId).emit('newMinutelyNetStats', newMinutelyNetStats);
+        console.log(`${currentTimeReadable()} | Emit : newMinutelyNetStats.`);
+    }
 });
