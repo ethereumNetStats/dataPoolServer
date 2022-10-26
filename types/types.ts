@@ -37,7 +37,7 @@ type addressesInTimeRange = {
     weekly: arrayOfAddresses
 }
 
-type minutelyAddressCount = {
+type numberOfAddresses = {
     startTimeReadable: string,
     endTimeReadable: string,
     startTimeUnix: number,
@@ -46,9 +46,9 @@ type minutelyAddressCount = {
     noRecordFlag: boolean,
 };
 
-type minutelyNetStats = recordOfEthDB & Pick<minutelyAddressCount, "numberOfAddress">;
+type netStats = recordOfEthDB & Pick<numberOfAddresses, "numberOfAddress">;
 
-type minutelyNetStatsArray = Array<minutelyNetStats>;
+type netStatsArray = Array<netStats>;
 
 export type {
     recordOfEthDB,
@@ -56,6 +56,6 @@ export type {
     arrayOfAddresses,
     addressesInTimeRange,
     addresses,
-    minutelyNetStats,
-    minutelyNetStatsArray
+    netStats,
+    netStatsArray,
 }
