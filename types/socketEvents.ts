@@ -12,6 +12,9 @@ type dataPoolServerToEthChartSocketServerEvents = {
 
     initialDailyNetStats: (dailyNetStatsArray: netStatsArray) => void,
     stillNoInitialDailyNetStats: () => void,
+
+    initialWeeklyNetStats: (weeklyNetStatsArray: netStatsArray) => void,
+    stillNoInitialWeeklyNetStats: () => void,
 }
 
 //
@@ -21,6 +24,7 @@ type ethChartSocketServerToDataPoolServerEvents = {
     requestInitialMinutelyNetStats: () => void,
     requestInitialHourlyNetStats: () => void,
     requestInitialDailyNetStats: () => void,
+    requestInitialWeeklyNetStats: () => void,
 }
 
 //
@@ -35,6 +39,9 @@ type SocketServerToDataPoolServerEvents = {
 
     initialDailyNetStats: (dailyNetStatsArray: netStatsArray) => void,
     newDailyNetStats: (newDailyNetStats: netStats) => void,
+
+    initialWeeklyNetStats: (weeklyNetStatsArray: netStatsArray) => void,
+    newWeeklyNetStats: (newWeeklyNetStats: netStats) => void,
 }
 
 //
@@ -44,6 +51,7 @@ type DataPoolServerToSocketServerEvents = {
     requestInitialMinutelyNetStats: () => void,
     requestInitialHourlyNetStats: () => void,
     requestInitialDailyNetStats: () => void,
+    requestInitialWeeklyNetStats: () => void,
 }
 
 export type {dataPoolServerToEthChartSocketServerEvents, ethChartSocketServerToDataPoolServerEvents, SocketServerToDataPoolServerEvents, DataPoolServerToSocketServerEvents}

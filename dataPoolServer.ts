@@ -32,6 +32,7 @@ const dataPoolServer: Server = new Server<ethChartSocketServerToDataPoolServerEv
 let minutelyNetStats: netStatsArray = [];
 let hourlyNetStats: netStatsArray = [];
 let dailyNetStats: netStatsArray = [];
+let weeklyNetStats: netStatsArray = [];
 
 let ethChartSocketServerId: string = '';
 
@@ -78,6 +79,16 @@ dataPoolServer.on('connect', async (client) => {
         }
     });
 
+    client.on('requestInitialWeeklyNetStats', () => {
+        if (weeklyNetStats.length !== 0) {
+            dataPoolServer.to(ethChartSocketServerId).emit('initialWeeklyNetStats', weeklyNetStats);
+            console.log(`${currentTimeReadable()} | Emit : 'initialWeeklyNetStats' | To : ethChartSocketServer`);
+        } else {
+            dataPoolServer.to(ethChartSocketServerId).emit('stillNoInitialWeeklyNetStats');
+            console.log(`${currentTimeReadable()} | Emit : 'stillNoInitialWeeklyNetStats' | To : ethChartSocketServer`);
+        }
+    });
+
     client.on("disconnect", (reason) => {
 
         switch (client.id) {
@@ -120,12 +131,18 @@ const socketClient: Socket<SocketServerToDataPoolServerEvents, DataPoolServerToS
 socketClient.on("connect", () => {
     console.log(`${currentTimeReadable()} | Connect : socketServer.`);
     socketClient.emit("requestInitialMinutelyNetStats");
-    console.log(`${currentTimeReadable()} | Emit : 'requestInitialMinutelyNetStats'`);
+    console.log(`${currentTimeReadable()} | Emit : 'requestInitialMinutelyNetStats' | To : socketServer`);
     socketClient.emit('requestInitialHourlyNetStats');
-    console.log(`${currentTimeReadable()} | Emit : 'requestInitialHourlyNetStats'`);
+    console.log(`${currentTimeReadable()} | Emit : 'requestInitialHourlyNetStats' | To : socketServer`);
     socketClient.emit('requestInitialDailyNetStats');
-    console.log(`${currentTimeReadable()} | Emit : 'requestInitialDailyNetStats'`);
+    console.log(`${currentTimeReadable()} | Emit : 'requestInitialDailyNetStats' | To : socketServer`);
+    socketClient.emit('requestInitialWeeklyNetStats');
+    console.log(`${currentTimeReadable()} | Emit : 'requestInitialWeeklyNetStats' | To : socketServer`);
 });
+
+//
+//Socket minutely event handlers with the socketServer.
+//
 
 socketClient.on("initialMinutelyNetStats", (initialMinutelyNetStats: netStatsArray) => {
     console.log(`${currentTimeReadable()} | Receive : 'initialMinutelyNetStats' | From : socketServer`);
@@ -142,6 +159,10 @@ socketClient.on("newMinutelyNetStats", (newMinutelyNetStats: netStats) => {
     }
 });
 
+//
+//Socket hourly event handlers with the socketServer.
+//
+
 socketClient.on("initialHourlyNetStats", (initialHourlyNetStats: netStatsArray) => {
     console.log(`${currentTimeReadable()} | Receive : 'initialHourlyNetStats' | From : socketServer`);
     hourlyNetStats = initialHourlyNetStats;
@@ -156,9 +177,13 @@ socketClient.on("newHourlyNetStats", (newHourlyNetStats: netStats) => {
     }
 });
 
+//
+//Socket daily event handlers with the socketServer.
+//
+
 socketClient.on("initialDailyNetStats", (initialDailyNetStats: netStatsArray) => {
     console.log(`${currentTimeReadable()} | Receive : 'initialDailyNetStats' | From : socketServer`);
-    hourlyNetStats = initialDailyNetStats;
+    dailyNetStats = initialDailyNetStats;
 });
 
 socketClient.on("newDailyNetStats", (newDailyNetStats: netStats) => {
@@ -167,5 +192,23 @@ socketClient.on("newDailyNetStats", (newDailyNetStats: netStats) => {
         dailyNetStats = [...dailyNetStats.slice(1), newDailyNetStats];
         console.log(`${currentTimeReadable()} | Update : dailyNetStats. | Data range : ${unixTimeReadable(dailyNetStats[dailyNetStats.length - 1].startTimeUnix)} - ${unixTimeReadable(dailyNetStats[0].startTimeUnix)}`);
         dataPoolServer.to(ethChartSocketServerId).emit('newDailyNetStats', newDailyNetStats);
+    }
+});
+
+//
+//Socket weekly event handlers with the socketServer.
+//
+
+socketClient.on("initialWeeklyNetStats", (initialWeeklyNetStats: netStatsArray) => {
+    console.log(`${currentTimeReadable()} | Receive : 'initialWeeklyNetStats' | From : socketServer`);
+    dailyNetStats = initialWeeklyNetStats;
+});
+
+socketClient.on("newWeeklyNetStats", (newWeeklyNetStats: netStats) => {
+    console.log(`${currentTimeReadable()} | Receive : 'newWeeklyNetStats' | From : socketServer`);
+    if (weeklyNetStats.length !== 0) {
+        weeklyNetStats = [...weeklyNetStats.slice(1), newWeeklyNetStats];
+        console.log(`${currentTimeReadable()} | Update : weeklyNetStats. | Data range : ${unixTimeReadable(weeklyNetStats[weeklyNetStats.length - 1].startTimeUnix)} - ${unixTimeReadable(weeklyNetStats[0].startTimeUnix)}`);
+        dataPoolServer.to(ethChartSocketServerId).emit('newWeeklyNetStats', newWeeklyNetStats);
     }
 });
