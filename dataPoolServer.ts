@@ -201,7 +201,7 @@ socketClient.on("newDailyNetStats", (newDailyNetStats: netStats) => {
 
 socketClient.on("initialWeeklyNetStats", (initialWeeklyNetStats: netStatsArray) => {
     console.log(`${currentTimeReadable()} | Receive : 'initialWeeklyNetStats' | From : socketServer`);
-    dailyNetStats = initialWeeklyNetStats;
+    weeklyNetStats = initialWeeklyNetStats;
 });
 
 socketClient.on("newWeeklyNetStats", (newWeeklyNetStats: netStats) => {
