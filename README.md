@@ -17,7 +17,7 @@ dataPoolServerは、以下の動作をします。
 
 # ソースコード
 ソースコードを確認したい場合は、以下のソースコードを確認して下さい。
-- メイン：
+- メイン：https://github.com/ethereumNetStats/dataPoolServer/blob/main/dataPoolServer.ts
 
 # 使い方
 以下では、ubuntu server v22.04での使用例を説明します。  
