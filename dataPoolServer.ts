@@ -22,8 +22,8 @@ import type {
 
 // socket.ioイベントの定義のインポート
 import type {
-    ethChartSocketServerToDataPoolServerEvents,
-    dataPoolServerToEthChartSocketServerEvents,
+    dataPublisherToDataPoolServerEvents,
+    dataPoolServerToDataPublisherEvents,
     SocketServerToDataPoolServerEvents,
     DataPoolServerToSocketServerEvents
 } from "./types/socketEvents"
@@ -33,7 +33,7 @@ import type {
 //
 
 // socket.ioサーバーの起動
-const dataPoolServer: Server = new Server<ethChartSocketServerToDataPoolServerEvents, dataPoolServerToEthChartSocketServerEvents>(2226);
+const dataPoolServer: Server = new Server<dataPublisherToDataPoolServerEvents, dataPoolServerToDataPublisherEvents>(2226);
 
 // 各集計データを格納する変数の初期化
 let minutelyNetStats: netStatsArray = [];
@@ -45,19 +45,19 @@ let weeklyNetStats: netStatsArray = [];
 let blockDataArray: blockDataArray = [];
 
 // データパブリッシャーのソケットIDを格納する変数の初期化
-let ethChartSocketServerId: string = '';
+let dataPublisherId: string = '';
 
 // データパブリッシャーの名前登録
-const ethChartSocketServerName: string = 'ethChartSocketServer';
+const dataPublisherName: string = 'dataPublisher';
 
 // データパブリッシャーとのソケットイベント登録
 dataPoolServer.on('connect', async (client) => {
 
     // 接続してきたソケットクライアントの'query.name'が登録名と一致したらIDを格納
     switch (client.handshake.query.name) {
-        case ethChartSocketServerName:
-            ethChartSocketServerId = client.id;
-            console.log(`${currentTimeReadable()} | Connect : ${ethChartSocketServerName}`);
+        case dataPublisherName:
+            dataPublisherId = client.id;
+            console.log(`${currentTimeReadable()} | Connect : ${dataPublisherName}`);
             break;
     }
 
@@ -65,12 +65,12 @@ dataPoolServer.on('connect', async (client) => {
     client.on('requestInitialMinutelyNetStats', () => {
         if (minutelyNetStats.length !== 0) {
             // 既に該当データをsocketServerから受け取っていた場合は、そのデータをデータパブリッシャーに返す
-            dataPoolServer.to(ethChartSocketServerId).emit('initialMinutelyNetStats', minutelyNetStats);
-            console.log(`${currentTimeReadable()} | Emit : 'initialMinutelyNetStats' | To : ethChartSocketServer`);
+            dataPoolServer.to(dataPublisherId).emit('initialMinutelyNetStats', minutelyNetStats);
+            console.log(`${currentTimeReadable()} | Emit : 'initialMinutelyNetStats' | To : dataPublisher`);
         } else {
             // 該当データをsocketServerから受け取っていない場合は、そのことを示すイベント'stillNoInitialMinutelyNetStats'をデータパブリッシャーに返す
-            dataPoolServer.to(ethChartSocketServerId).emit('stillNoInitialMinutelyNetStats');
-            console.log(`${currentTimeReadable()} | Emit : 'stillNoInitialMinutelyNetStats' | To : ethChartSocketServer`);
+            dataPoolServer.to(dataPublisherId).emit('stillNoInitialMinutelyNetStats');
+            console.log(`${currentTimeReadable()} | Emit : 'stillNoInitialMinutelyNetStats' | To : dataPublisher`);
         }
     });
 
@@ -78,12 +78,12 @@ dataPoolServer.on('connect', async (client) => {
     client.on('requestInitialHourlyNetStats', () => {
         if (hourlyNetStats.length !== 0) {
             // 既に該当データをsocketServerから受け取っていた場合は、そのデータをデータパブリッシャーに返す
-            dataPoolServer.to(ethChartSocketServerId).emit('initialHourlyNetStats', hourlyNetStats);
-            console.log(`${currentTimeReadable()} | Emit : 'initialHourlyNetStats' | To : ethChartSocketServer`);
+            dataPoolServer.to(dataPublisherId).emit('initialHourlyNetStats', hourlyNetStats);
+            console.log(`${currentTimeReadable()} | Emit : 'initialHourlyNetStats' | To : dataPublisher`);
         } else {
             // 該当データをsocketServerから受け取っていない場合は、そのことを示すイベント'stillNoInitialHourlyNetStats'をデータパブリッシャーに返す
-            dataPoolServer.to(ethChartSocketServerId).emit('stillNoInitialHourlyNetStats');
-            console.log(`${currentTimeReadable()} | Emit : 'stillNoInitialHourlyNetStats' | To : ethChartSocketServer`);
+            dataPoolServer.to(dataPublisherId).emit('stillNoInitialHourlyNetStats');
+            console.log(`${currentTimeReadable()} | Emit : 'stillNoInitialHourlyNetStats' | To : dataPublisher`);
         }
     });
 
@@ -91,12 +91,12 @@ dataPoolServer.on('connect', async (client) => {
     client.on('requestInitialDailyNetStats', () => {
         if (dailyNetStats.length !== 0) {
             // 既に該当データをsocketServerから受け取っていた場合は、そのデータをデータパブリッシャーに返す
-            dataPoolServer.to(ethChartSocketServerId).emit('initialDailyNetStats', dailyNetStats);
-            console.log(`${currentTimeReadable()} | Emit : 'initialDailyNetStats' | To : ethChartSocketServer`);
+            dataPoolServer.to(dataPublisherId).emit('initialDailyNetStats', dailyNetStats);
+            console.log(`${currentTimeReadable()} | Emit : 'initialDailyNetStats' | To : dataPublisher`);
         } else {
             // 該当データをsocketServerから受け取っていない場合は、そのことを示すイベント'stillNoInitialDailyNetStats'をデータパブリッシャーに返す
-            dataPoolServer.to(ethChartSocketServerId).emit('stillNoInitialDailyNetStats');
-            console.log(`${currentTimeReadable()} | Emit : 'stillNoInitialDailyNetStats' | To : ethChartSocketServer`);
+            dataPoolServer.to(dataPublisherId).emit('stillNoInitialDailyNetStats');
+            console.log(`${currentTimeReadable()} | Emit : 'stillNoInitialDailyNetStats' | To : dataPublisher`);
         }
     });
 
@@ -104,12 +104,12 @@ dataPoolServer.on('connect', async (client) => {
     client.on('requestInitialWeeklyNetStats', () => {
         if (weeklyNetStats.length !== 0) {
             // 既に該当データをsocketServerから受け取っていた場合は、そのデータをデータパブリッシャーに返す
-            dataPoolServer.to(ethChartSocketServerId).emit('initialWeeklyNetStats', weeklyNetStats);
-            console.log(`${currentTimeReadable()} | Emit : 'initialWeeklyNetStats' | To : ethChartSocketServer`);
+            dataPoolServer.to(dataPublisherId).emit('initialWeeklyNetStats', weeklyNetStats);
+            console.log(`${currentTimeReadable()} | Emit : 'initialWeeklyNetStats' | To : dataPublisher`);
         } else {
             // 該当データをsocketServerから受け取っていない場合は、そのことを示すイベント'stillNoInitialWeeklyNetStats'をデータパブリッシャーに返す
-            dataPoolServer.to(ethChartSocketServerId).emit('stillNoInitialWeeklyNetStats');
-            console.log(`${currentTimeReadable()} | Emit : 'stillNoInitialWeeklyNetStats' | To : ethChartSocketServer`);
+            dataPoolServer.to(dataPublisherId).emit('stillNoInitialWeeklyNetStats');
+            console.log(`${currentTimeReadable()} | Emit : 'stillNoInitialWeeklyNetStats' | To : dataPublisher`);
         }
     });
 
@@ -117,18 +117,18 @@ dataPoolServer.on('connect', async (client) => {
     client.on('requestInitialBlockData', () => {
         if (blockDataArray.length !== 0) {
             // 既に該当データをsocketServerから受け取っていた場合は、そのデータをデータパブリッシャーに返す
-            dataPoolServer.to(ethChartSocketServerId).emit('initialBlockData', blockDataArray);
-            console.log(`${currentTimeReadable()} | Emit : 'initialBlockData' | To : ethChartSocketServer`);
+            dataPoolServer.to(dataPublisherId).emit('initialBlockData', blockDataArray);
+            console.log(`${currentTimeReadable()} | Emit : 'initialBlockData' | To : dataPublisher`);
         } else {
             // 該当データをsocketServerから受け取っていない場合は、そのことを示すイベント'stillNoInitialBlock'をデータパブリッシャーに返す
-            dataPoolServer.to(ethChartSocketServerId).emit('stillNoInitialBlockData');
-            console.log(`${currentTimeReadable()} | Emit : 'stillNoInitialBlockData' | To : ethChartSocketServer`);
+            dataPoolServer.to(dataPublisherId).emit('stillNoInitialBlockData');
+            console.log(`${currentTimeReadable()} | Emit : 'stillNoInitialBlockData' | To : dataPublisher`);
         }
     });
 
     // ユーザーがブロックデータの詳細を要求したことを示す'requestBlockDetail'イベントを受けた時の処理
     client.on('requestBlockDetail', (requestBlockDetail: requestBlockDetail) => {
-        console.log(`${currentTimeReadable()} | Receive : 'requestBlockDetail' | From : ethChartSocketServer | Frontend : ${requestBlockDetail.frontendId}`);
+        console.log(`${currentTimeReadable()} | Receive : 'requestBlockDetail' | From : dataPublisher | Frontend : ${requestBlockDetail.frontendId}`);
         // 要求を受けたデータをそのままバックエンドのsocketServerに転送
         socketClient.emit('requestBlockDetail', requestBlockDetail);
         console.log(`${currentTimeReadable()} | Emit : 'requestBlockDetail' | To : socketServer`);
@@ -136,7 +136,7 @@ dataPoolServer.on('connect', async (client) => {
 
     // ユーザーがフロントエンドの"Block list"ページを要求したことを示す'requestBlockList'イベントを受けた時の処理
     client.on('requestBlockList', (requestBlockList: requestBlockList) => {
-        console.log(`${currentTimeReadable()} | Receive : 'requestBlockList' | From : ethChartSocketServer | PageOffset : ${requestBlockList.pageOffset}`);
+        console.log(`${currentTimeReadable()} | Receive : 'requestBlockList' | From : dataPublisher | PageOffset : ${requestBlockList.pageOffset}`);
         // 要求を受けたデータをそのままバックエンドのsocketServerに転送
         socketClient.emit('requestBlockList', requestBlockList);
         console.log(`${currentTimeReadable()} | Emit : 'requestBlockList' | To : socketServer | PageOffset: ${requestBlockList.pageOffset}`);
@@ -144,7 +144,7 @@ dataPoolServer.on('connect', async (client) => {
 
     // ユーザーが'Block list'の特定のページ番号をクリックしたか、特定のブロックナンバーを入力したことを示す'requestBlockListPageByBlockNumber'イベントを受けた時の処理
     client.on('requestBlockListPageByBlockNumber', (requestBlockListPageByBlockNumber: requestBlockListPageByBlockNumber) => {
-        console.log(`${currentTimeReadable()} | Receive : 'requestBlockListPageByBlockNumber' | From : ethChartSocketServer | BlockNumber : ${requestBlockListPageByBlockNumber.blockNumber}`);
+        console.log(`${currentTimeReadable()} | Receive : 'requestBlockListPageByBlockNumber' | From : dataPublisher | BlockNumber : ${requestBlockListPageByBlockNumber.blockNumber}`);
         // 要求を受けたデータをそのままバックエンドのsocketServerに転送
         socketClient.emit('requestBlockListPageByBlockNumber', requestBlockListPageByBlockNumber);
         console.log(`${currentTimeReadable()} | Emit : 'requestBlockListPageByBlockNumber' | To : socketServer | BlockNumber: ${requestBlockListPageByBlockNumber.blockNumber}`);
@@ -154,7 +154,7 @@ dataPoolServer.on('connect', async (client) => {
     client.on("disconnect", (reason) => {
 
         switch (client.id) {
-            case ethChartSocketServerId:
+            case dataPublisherId:
                 // データパブリッシャーとの接続が切れたことを示すメッセージを表示
                 console.log(`${currentTimeReadable()} | Disconnect : ethChartServer | Reason : ${reason}`);
         }
@@ -227,8 +227,8 @@ socketClient.on("newMinutelyNetStats", (newMinutelyNetStats: netStats) => {
         minutelyNetStats = [...minutelyNetStats.slice(1), newMinutelyNetStats];
         console.log(`${currentTimeReadable()} | Update : minutelyNetStats. | Data range : ${unixTimeReadable(minutelyNetStats[minutelyNetStats.length - 1].startTimeUnix)} - ${unixTimeReadable(minutelyNetStats[0].startTimeUnix)}`);
         // 受け取った最新値をデータパブリッシャーに転送
-        dataPoolServer.to(ethChartSocketServerId).emit('newMinutelyNetStats', newMinutelyNetStats);
-        console.log(`${currentTimeReadable()} | Emit : 'newMinutelyNetStats' | To : ethChartSocketServer`);
+        dataPoolServer.to(dataPublisherId).emit('newMinutelyNetStats', newMinutelyNetStats);
+        console.log(`${currentTimeReadable()} | Emit : 'newMinutelyNetStats' | To : dataPublisher`);
     }
 });
 
@@ -251,7 +251,7 @@ socketClient.on("newHourlyNetStats", (newHourlyNetStats: netStats) => {
         hourlyNetStats = [...hourlyNetStats.slice(1), newHourlyNetStats];
         console.log(`${currentTimeReadable()} | Update : hourlyNetStats. | Data range : ${unixTimeReadable(hourlyNetStats[hourlyNetStats.length - 1].startTimeUnix)} - ${unixTimeReadable(hourlyNetStats[0].startTimeUnix)}`);
         // 受け取った最新値をデータパブリッシャーに転送
-        dataPoolServer.to(ethChartSocketServerId).emit('newHourlyNetStats', newHourlyNetStats);
+        dataPoolServer.to(dataPublisherId).emit('newHourlyNetStats', newHourlyNetStats);
     }
 });
 
@@ -274,7 +274,7 @@ socketClient.on("newDailyNetStats", (newDailyNetStats: netStats) => {
         dailyNetStats = [...dailyNetStats.slice(1), newDailyNetStats];
         console.log(`${currentTimeReadable()} | Update : dailyNetStats. | Data range : ${unixTimeReadable(dailyNetStats[dailyNetStats.length - 1].startTimeUnix)} - ${unixTimeReadable(dailyNetStats[0].startTimeUnix)}`);
         // 受け取った最新値をデータパブリッシャーに転送
-        dataPoolServer.to(ethChartSocketServerId).emit('newDailyNetStats', newDailyNetStats);
+        dataPoolServer.to(dataPublisherId).emit('newDailyNetStats', newDailyNetStats);
     }
 });
 
@@ -297,7 +297,7 @@ socketClient.on("newWeeklyNetStats", (newWeeklyNetStats: netStats) => {
         weeklyNetStats = [...weeklyNetStats.slice(1), newWeeklyNetStats];
         console.log(`${currentTimeReadable()} | Update : weeklyNetStats. | Data range : ${unixTimeReadable(weeklyNetStats[weeklyNetStats.length - 1].startTimeUnix)} - ${unixTimeReadable(weeklyNetStats[0].startTimeUnix)}`);
         // 受け取った最新値をデータパブリッシャーに転送
-        dataPoolServer.to(ethChartSocketServerId).emit('newWeeklyNetStats', newWeeklyNetStats);
+        dataPoolServer.to(dataPublisherId).emit('newWeeklyNetStats', newWeeklyNetStats);
     }
 });
 
@@ -316,7 +316,7 @@ socketClient.on("newBlockData", (newBlockData: blockData) => {
         blockDataArray.pop();
         blockDataArray.unshift(newBlockData);
         // 最新値をデータパブリッシャーに転送
-        dataPoolServer.to(ethChartSocketServerId).emit('newBlockData', newBlockData);
+        dataPoolServer.to(dataPublisherId).emit('newBlockData', newBlockData);
     }
 });
 
@@ -324,16 +324,16 @@ socketClient.on("newBlockData", (newBlockData: blockData) => {
 socketClient.on('responseBlockDetail', (responseBlockDetail: responseBlockDetail) => {
     console.log(`${currentTimeReadable()} | Receive : 'responseBlockDetail' | From : socketServer | noRecord : ${responseBlockDetail.noRecord}`);
     // 受け取ったデータをそのままデータパブリッシャーに転送
-    dataPoolServer.to(ethChartSocketServerId).emit('responseBlockDetail', responseBlockDetail);
-    console.log(`${currentTimeReadable()} | Emit : 'responseBlockDetail' | To : ethChartSocketServer`);
+    dataPoolServer.to(dataPublisherId).emit('responseBlockDetail', responseBlockDetail);
+    console.log(`${currentTimeReadable()} | Emit : 'responseBlockDetail' | To : dataPublisher`);
 });
 
 // 'Block list'ページに表示するブロックデータを受け取るイベント'responseBlockList'の処理
 socketClient.on('responseBlockList', (responseBlockList: responseBlockList) => {
     console.log(`${currentTimeReadable()} | Receive : 'responseBlockList' | From : socketServer`);
     // 受け取ったデータをそのままデータパブリッシャーに転送
-    dataPoolServer.to(ethChartSocketServerId).emit('responseBlockList', responseBlockList);
-    console.log(`${currentTimeReadable()} | Emit : 'responseBlockList' | To : ethChartSocketServer`);
+    dataPoolServer.to(dataPublisherId).emit('responseBlockList', responseBlockList);
+    console.log(`${currentTimeReadable()} | Emit : 'responseBlockList' | To : dataPublisher`);
 });
 
 // ユーザーが'Block list'ページのページ番号をクリックあるいはブロックナンバーを入力したときに、
@@ -341,6 +341,6 @@ socketClient.on('responseBlockList', (responseBlockList: responseBlockList) => {
 socketClient.on('responseBlockListPageByBlockNumber', (responseBlockListPageByBlockNumber: responseBlockListPageByBlockNumber) => {
     console.log(`${currentTimeReadable()} | Receive : 'responseBlockListPageByBlockNumber' | From : socketServer`);
     // 受け取ったデータをそのまま転送
-    dataPoolServer.to(ethChartSocketServerId).emit('responseBlockListPageByBlockNumber', responseBlockListPageByBlockNumber);
-    console.log(`${currentTimeReadable()} | Emit : 'responseBlockListPageByBlockNumber' | To : ethChartSocketServer`);
+    dataPoolServer.to(dataPublisherId).emit('responseBlockListPageByBlockNumber', responseBlockListPageByBlockNumber);
+    console.log(`${currentTimeReadable()} | Emit : 'responseBlockListPageByBlockNumber' | To : dataPublisher`);
 });

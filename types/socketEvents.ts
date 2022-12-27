@@ -12,7 +12,7 @@ import type {
 //
 // データプールサーバーからデータパブリッシャーに送るソケット通信のイベント名とデータ型の定義
 //
-type dataPoolServerToEthChartSocketServerEvents = {
+type dataPoolServerToDataPublisherEvents = {
     initialMinutelyNetStats: (minutelyNetStatsArray: netStatsArray) => void,
     stillNoInitialMinutelyNetStats: () => void,
 
@@ -36,7 +36,7 @@ type dataPoolServerToEthChartSocketServerEvents = {
 //
 // データパブリッシャーからデータプールサーバーに送るソケット通信のイベント名とデータ型の定義
 //
-type ethChartSocketServerToDataPoolServerEvents = {
+type dataPublisherToDataPoolServerEvents = {
     requestInitialMinutelyNetStats: () => void,
     requestInitialHourlyNetStats: () => void,
     requestInitialDailyNetStats: () => void,
@@ -89,4 +89,4 @@ type DataPoolServerToSocketServerEvents = {
     requestBlockListPageByBlockNumber: (requestBlockListPageByBlockNumber: requestBlockListPageByBlockNumber) => void,
 }
 
-export type {dataPoolServerToEthChartSocketServerEvents, ethChartSocketServerToDataPoolServerEvents, SocketServerToDataPoolServerEvents, DataPoolServerToSocketServerEvents}
+export type {dataPoolServerToDataPublisherEvents, dataPublisherToDataPoolServerEvents, SocketServerToDataPoolServerEvents, DataPoolServerToSocketServerEvents}
