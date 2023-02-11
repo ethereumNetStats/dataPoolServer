@@ -18,6 +18,7 @@ import type {
     requestBlockDetail, requestBlockList, requestBlockListPageByBlockNumber,
     responseBlockDetail,
     responseBlockList, responseBlockListPageByBlockNumber,
+    requestTransactionDetail, responseTransactionDetail
 } from "./types/types";
 
 // socket.ioイベントの定義のインポート
@@ -148,6 +149,12 @@ dataPoolServer.on('connect', async (client) => {
         // 要求を受けたデータをそのままバックエンドのsocketServerに転送
         socketClient.emit('requestBlockListPageByBlockNumber', requestBlockListPageByBlockNumber);
         console.log(`${currentTimeReadable()} | Emit : 'requestBlockListPageByBlockNumber' | To : socketServer | BlockNumber: ${requestBlockListPageByBlockNumber.blockNumber}`);
+    });
+
+    // ユーザーがトランザクションハッシュを入力して検索するときのイベント'requestTransactionDetail'の処理
+    client.on('requestTransactionDetail', (requestTransactionDetail: requestTransactionDetail) => {
+        console.log(`${currentTimeReadable()} | Receive : 'requestTransactionDetail' | From : dataPublisher | Request transaction hash : ${requestTransactionDetail.transactionHash}`);
+        socketClient.emit('requestTransactionDetail', requestTransactionDetail);
     });
 
     // ソケットクライアントの切断が発生した時の処理
@@ -343,4 +350,11 @@ socketClient.on('responseBlockListPageByBlockNumber', (responseBlockListPageByBl
     // 受け取ったデータをそのまま転送
     dataPoolServer.to(dataPublisherId).emit('responseBlockListPageByBlockNumber', responseBlockListPageByBlockNumber);
     console.log(`${currentTimeReadable()} | Emit : 'responseBlockListPageByBlockNumber' | To : dataPublisher`);
+});
+
+// データパブリッシャーからの'requestTransactionDetail'に対する'responseTransactionDetail'イベントをソケットサーバーから受けた時の処理
+socketClient.on('responseTransactionDetail', (responseTransactionDetail: responseTransactionDetail) => {
+    console.log(`${currentTimeReadable()} | Receive : 'responseTransactionDetail' | From : socketServer`);
+    dataPoolServer.to(dataPublisherId).emit('responseTransactionDetail', responseTransactionDetail);
+    console.log(`${currentTimeReadable()} | Emit : 'responseTransactionDetail | To : dataPublisher`);
 });

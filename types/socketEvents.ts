@@ -4,9 +4,9 @@ import type {
     blockDataArray,
     netStats,
     netStatsArray,
-    requestBlockDetail, requestBlockList, requestBlockListPageByBlockNumber,
+    requestBlockDetail, requestBlockList, requestBlockListPageByBlockNumber, requestTransactionDetail,
     responseBlockDetail,
-    responseBlockList, responseBlockListPageByBlockNumber
+    responseBlockList, responseBlockListPageByBlockNumber, responseTransactionDetail
 } from "./types";
 
 //
@@ -31,6 +31,7 @@ type dataPoolServerToDataPublisherEvents = {
     responseBlockDetail: (responseBlockDetail: responseBlockDetail) => void,
     responseBlockList: (responseBlockList: responseBlockList) => void,
     responseBlockListPageByBlockNumber: (responseBlockListPageByBlockNumber: responseBlockListPageByBlockNumber) => void,
+    responseTransactionDetail: (responseTransactionDetail: responseTransactionDetail) => void,
 }
 
 //
@@ -47,6 +48,7 @@ type dataPublisherToDataPoolServerEvents = {
     requestBlockDetail: (requestBlockDetail: requestBlockDetail) => void,
     requestBlockList: (requestBlockList: requestBlockList) => void,
     requestBlockListPageByBlockNumber: (requestBlockListPageByBlockNumber: requestBlockListPageByBlockNumber) => void,
+    requestTransactionDetail: (requestTransactionDetail: requestTransactionDetail) => void,
 }
 
 //
@@ -71,6 +73,7 @@ type SocketServerToDataPoolServerEvents = {
     responseBlockDetail: (responseBlockDetail: responseBlockDetail) => void,
     responseBlockList: (responseBlockList: responseBlockList) => void,
     responseBlockListPageByBlockNumber: (responseBlockListPageByBlockNumber: responseBlockListPageByBlockNumber) => void,
+    responseTransactionDetail: (responseTransactionDetail: responseTransactionDetail) => void,
 }
 
 //
@@ -87,6 +90,7 @@ type DataPoolServerToSocketServerEvents = {
     requestBlockDetail: (requestBlockDetail: requestBlockDetail) => void,
     requestBlockList: (requestBlockList: requestBlockList) => void,
     requestBlockListPageByBlockNumber: (requestBlockListPageByBlockNumber: requestBlockListPageByBlockNumber) => void,
+    requestTransactionDetail: (requestTransactionDetail: requestTransactionDetail) => void,
 }
 
 export type {dataPoolServerToDataPublisherEvents, dataPublisherToDataPoolServerEvents, SocketServerToDataPoolServerEvents, DataPoolServerToSocketServerEvents}
